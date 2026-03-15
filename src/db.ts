@@ -13,6 +13,7 @@ export interface PDFBook {
   data: ArrayBuffer;
   chapters: Chapter[];
   addedAt: number;
+  lastPage?: number;
   annotations?: Record<number, AnnotationPath[]>;
 }
 

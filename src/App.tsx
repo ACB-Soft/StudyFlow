@@ -17,7 +17,9 @@ import {
   X,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  Download
+  Download,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
@@ -58,8 +60,10 @@ export default function App() {
   const [editingBookId, setEditingBookId] = useState<string | null>(null);
   const [editingBookName, setEditingBookName] = useState("");
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+  const [editChapterTitle, setEditChapterTitle] = useState("");
   const [editStartPage, setEditStartPage] = useState<number>(1);
   const [editEndPage, setEditEndPage] = useState<number>(1);
+  const [pdfZoom, setPdfZoom] = useState(1.5);
   const [showCompletionMessage, setShowCompletionMessage] = useState(false);
   const [isManualSegmenting, setIsManualSegmenting] = useState(false);
   const [manualChapters, setManualChapters] = useState<Chapter[]>([]);
@@ -91,7 +95,15 @@ export default function App() {
   }, []);
 
   const startStudySession = (chapterId: string, pageNumber: number) => {
-    setViewingPage(pageNumber);
+    // If we have a lastPage for this book, and it's within this chapter, use it
+    let initialPage = pageNumber;
+    if (selectedBook?.lastPage) {
+      const chapter = selectedBook.chapters.find(c => c.id === chapterId);
+      if (chapter && selectedBook.lastPage >= chapter.pageNumber && selectedBook.lastPage <= (chapter.endPage || chapter.pageNumber)) {
+        initialPage = selectedBook.lastPage;
+      }
+    }
+    setViewingPage(initialPage);
     setActiveChapterId(chapterId);
     setStudyStartTime(Date.now());
   };
@@ -270,7 +282,13 @@ export default function App() {
     const book = books.find(b => b.id === bookId);
     if (book) {
       const updatedChapters = book.chapters.map(c => 
-        c.id === chapterId ? { ...c, pageNumber: editStartPage, endPage: editEndPage, estimatedMinutes: Math.max(5, (editEndPage - editStartPage + 1) * 2) } : c
+        c.id === chapterId ? { 
+          ...c, 
+          title: editChapterTitle.trim() || c.title,
+          pageNumber: editStartPage, 
+          endPage: editEndPage, 
+          estimatedMinutes: Math.max(5, (editEndPage - editStartPage + 1) * 2) 
+        } : c
       );
       const updatedBook = { ...book, chapters: updatedChapters };
       await saveBook(updatedBook);
@@ -465,8 +483,16 @@ export default function App() {
   useEffect(() => {
     if (viewingPage && selectedBook && pdfCanvasRef.current) {
       renderPDFPage(selectedBook.data, viewingPage);
+      
+      // Save last page
+      if (selectedBook.lastPage !== viewingPage) {
+        const updatedBook = { ...selectedBook, lastPage: viewingPage };
+        saveBook(updatedBook).then(() => {
+          setBooks(prev => prev.map(b => b.id === selectedBook.id ? updatedBook : b));
+        });
+      }
     }
-  }, [viewingPage, selectedBook]);
+  }, [viewingPage, selectedBook, pdfZoom]);
 
   const renderPDFPage = async (data: ArrayBuffer, pageNum: number) => {
     // Use a copy to prevent detaching the original buffer in state
@@ -474,7 +500,7 @@ export default function App() {
     const pdf = await loadingTask.promise;
     const page = await pdf.getPage(pageNum);
     
-    const viewport = page.getViewport({ scale: 1.5 });
+    const viewport = page.getViewport({ scale: pdfZoom });
     const canvas = pdfCanvasRef.current;
     if (!canvas) return;
     
@@ -626,6 +652,23 @@ export default function App() {
             )}
 
             <div className="flex items-center gap-2">
+              {viewingPage && (
+                <div className="flex items-center bg-bg-dim rounded-xl p-1 border border-white/5 mr-2">
+                  <button 
+                    onClick={() => setPdfZoom(prev => Math.max(0.5, prev - 0.25))}
+                    className="p-1.5 text-text-dim/40 hover:text-accent-dim transition-colors"
+                  >
+                    <ZoomOut size={14} />
+                  </button>
+                  <span className="text-[10px] font-bold text-text-dim/60 w-10 text-center">%{Math.round(pdfZoom * 100)}</span>
+                  <button 
+                    onClick={() => setPdfZoom(prev => Math.min(3, prev + 0.25))}
+                    className="p-1.5 text-text-dim/40 hover:text-accent-dim transition-colors"
+                  >
+                    <ZoomIn size={14} />
+                  </button>
+                </div>
+              )}
               {!viewingPage && !isManualSegmenting && (
                 <button 
                   onClick={startManualSegmentation}
@@ -757,30 +800,41 @@ export default function App() {
                   {editingChapterId === chapter.id ? (
                     <div className="w-full p-4 bg-surface-dim rounded-2xl border border-accent-dim/30 shadow-sm space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase text-text-dim/40">Aralık Düzenle</span>
+                        <span className="text-[10px] font-bold uppercase text-text-dim/40">Bölüm Düzenle</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleUpdateChapterRange(selectedBook.id, chapter.id)} className="text-accent-dim"><Save size={16} /></button>
                           <button onClick={() => setEditingChapterId(null)} className="text-text-dim/40"><X size={16} /></button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <p className="text-[10px] font-bold uppercase text-text-dim/40 mb-1">Başlangıç</p>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-text-dim/40 mb-1">Bölüm Adı</p>
                           <input 
-                            type="number"
+                            type="text"
                             className="bg-bg-dim border border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-text-dim w-full"
-                            value={editStartPage}
-                            onChange={(e) => setEditStartPage(parseInt(e.target.value))}
+                            value={editChapterTitle}
+                            onChange={(e) => setEditChapterTitle(e.target.value)}
                           />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[10px] font-bold uppercase text-text-dim/40 mb-1">Bitiş</p>
-                          <input 
-                            type="number"
-                            className="bg-bg-dim border border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-text-dim w-full"
-                            value={editEndPage}
-                            onChange={(e) => setEditEndPage(parseInt(e.target.value))}
-                          />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <p className="text-[10px] font-bold uppercase text-text-dim/40 mb-1">Başlangıç</p>
+                            <input 
+                              type="number"
+                              className="bg-bg-dim border border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-text-dim w-full"
+                              value={editStartPage}
+                              onChange={(e) => setEditStartPage(parseInt(e.target.value))}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[10px] font-bold uppercase text-text-dim/40 mb-1">Bitiş</p>
+                            <input 
+                              type="number"
+                              className="bg-bg-dim border border-white/10 rounded-lg px-2 py-1.5 text-sm font-bold text-text-dim w-full"
+                              value={editEndPage}
+                              onChange={(e) => setEditEndPage(parseInt(e.target.value))}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -804,6 +858,7 @@ export default function App() {
                       <button 
                         onClick={() => {
                           setEditingChapterId(chapter.id);
+                          setEditChapterTitle(chapter.title);
                           setEditStartPage(chapter.pageNumber);
                           setEditEndPage(chapter.endPage || chapter.pageNumber);
                         }}
@@ -827,17 +882,6 @@ export default function App() {
       {/* Background Glows */}
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent-dim/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 blur-[120px] rounded-full pointer-events-none" />
-
-      {/* External Link Button */}
-      <div className="fixed top-6 right-6 z-[60]">
-        <button 
-          onClick={() => window.open(window.location.href, '_blank')}
-          className="glass p-3 rounded-2xl text-text-dim/60 hover:text-accent-dim hover:border-accent-dim/50 transition-all shadow-xl active:scale-90"
-          title="Yeni Sekmede Aç"
-        >
-          <ExternalLink size={20} />
-        </button>
-      </div>
 
       <main className="flex-1 overflow-hidden p-6 max-w-[800px] mx-auto w-full relative z-10">
         {activeTab === 'dashboard' && renderDashboard()}
@@ -890,7 +934,7 @@ export default function App() {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-[10px] font-bold text-text-dim/40 uppercase tracking-widest mb-1">Versiyon</p>
-                      <p className="text-sm font-medium">StudyFlow v1.3.0</p>
+                      <p className="text-sm font-medium">Study Flow v1.4.0</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-text-dim/40 uppercase tracking-widest mb-1">Durum</p>
@@ -899,7 +943,7 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => {
-                      alert('Uygulama güncel! En son sürümü (v1.3.0) kullanıyorsunuz.');
+                      alert('Uygulama güncel! En son sürümü (v1.4.0) kullanıyorsunuz.');
                     }}
                     className="w-full text-[10px] font-bold text-accent-dim uppercase tracking-widest border border-accent-dim/30 py-3 rounded-xl hover:bg-accent-dim/10 transition-colors"
                   >

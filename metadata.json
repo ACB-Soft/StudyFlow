@@ -1,5 +1,5 @@
 {
-  "name": "StudyFlow PWA",
+  "name": "Study Flow",
   "description": "Offline-first study tracker with PDF chapter splitting and daily notifications.",
   "requestFramePermissions": []
 }

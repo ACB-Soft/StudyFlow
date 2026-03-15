@@ -14,9 +14,9 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'StudyFlow PWA',
+          name: 'Study Flow',
           short_name: 'StudyFlow',
-          description: 'Offline study tracker with PDF splitting',
+          description: 'Akıllı PDF Bölümleyici ve Çalışma Takipçisi',
           theme_color: '#ffffff',
           background_color: '#ffffff',
           display: 'standalone',
