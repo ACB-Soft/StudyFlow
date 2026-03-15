@@ -19,27 +19,55 @@ export default defineConfig(({mode}) => {
           enabled: true
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/cdnjs\.cloudflare\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'cdnjs-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            }
+          ]
         },
         manifest: {
           name: 'Study Flow',
           short_name: 'StudyFlow',
           description: 'Akıllı PDF Bölümleyici ve Çalışma Takipçisi',
-          theme_color: '#ffffff',
-          background_color: '#ffffff',
+          theme_color: '#3b82f6',
+          background_color: '#f8fafc',
           display: 'standalone',
           start_url: '/',
           scope: '/',
           icons: [
             {
               src: 'icon.svg',
-              sizes: 'any',
+              sizes: '192x192',
               type: 'image/svg+xml',
               purpose: 'any'
             },
             {
               src: 'icon.svg',
-              sizes: 'any',
+              sizes: '512x512',
+              type: 'image/svg+xml',
+              purpose: 'any'
+            },
+            {
+              src: 'icon.svg',
+              sizes: '192x192',
+              type: 'image/svg+xml',
+              purpose: 'maskable'
+            },
+            {
+              src: 'icon.svg',
+              sizes: '512x512',
               type: 'image/svg+xml',
               purpose: 'maskable'
             }

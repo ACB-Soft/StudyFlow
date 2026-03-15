@@ -89,8 +89,15 @@ export default function App() {
   const [currentManualChapterName, setCurrentManualChapterName] = useState("");
   const [manualStartPage, setManualStartPage] = useState<number>(1);
   const [manualEndPage, setManualEndPage] = useState<number>(1);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     loadData();
     // Daily notification reminder logic
     const checkNotification = () => {
@@ -110,7 +117,11 @@ export default function App() {
 
     const interval = setInterval(checkNotification, 1000 * 60 * 60); // Check every hour
     checkNotification();
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
   }, []);
 
   const startStudySession = (chapterId: string, pageNumber: number) => {
@@ -342,7 +353,14 @@ export default function App() {
       <div className="flex flex-col h-full space-y-5">
         <header className="flex justify-between items-center shrink-0">
           <div>
-            <h1 className="text-2xl font-semibold text-text-dim tracking-tight">StudyFlow</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold text-text-dim tracking-tight">StudyFlow</h1>
+              {!isOnline && (
+                <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-200">
+                  Çevrimdışı
+                </span>
+              )}
+            </div>
             <p className="text-text-dim/50 text-sm">Bugün neler öğreneceğiz?</p>
           </div>
           <button className="p-2.5 bg-surface-dim rounded-2xl shadow-sm border border-white/5 text-text-dim/70">
