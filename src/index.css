@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-dim: #f8fafc;
+  --color-surface-dim: rgba(255, 255, 255, 0.8);
+  --color-text-dim: #0f172a;
+  --color-accent-dim: #3b82f6; /* Vibrant Blue */
+  --color-accent-dim-hover: #2563eb;
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dim text-text-dim antialiased overflow-hidden min-h-screen;
+    background: radial-gradient(circle at top right, #eff6ff 0%, #f8fafc 100%);
+    user-select: none;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-xl border border-black/5 bg-surface-dim;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-xl border border-black/5 bg-white/80 rounded-[2rem] shadow-xl shadow-blue-900/5;
+  }
+}
+
+/* Custom scrollbar for dim theme */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a4a48;
+  border-radius: 10px;
+}
