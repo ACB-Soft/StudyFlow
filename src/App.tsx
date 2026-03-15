@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import { getAllBooks, saveBook, PDFBook, deleteBook, getAllSessions, StudySession, saveSession, AnnotationPath, Chapter } from './db';
 import { parsePDFChapters } from './pdfService';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -48,6 +49,24 @@ const ProgressBar = ({ progress }: { progress: number }) => (
 // --- Main App ---
 
 export default function App() {
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered');
+      // Check for updates every 30 minutes
+      if (r) {
+        setInterval(() => {
+          r.update();
+        }, 30 * 60 * 1000);
+      }
+    },
+    onRegisterError(error) {
+      console.error('SW registration error', error);
+    },
+  });
+
   const [activeTab, setActiveTab] = useState<'dashboard' | 'books' | 'settings'>('dashboard');
   const [books, setBooks] = useState<PDFBook[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
@@ -934,20 +953,40 @@ export default function App() {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-[10px] font-bold text-text-dim/40 uppercase tracking-widest mb-1">Versiyon</p>
-                      <p className="text-sm font-medium">Study Flow v1.4.0</p>
+                      <p className="text-sm font-medium">Study Flow v1.4.1</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-text-dim/40 uppercase tracking-widest mb-1">Durum</p>
-                      <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Güncel</p>
+                      <p className={`text-xs font-bold uppercase tracking-widest ${needRefresh ? 'text-orange-500 animate-pulse' : 'text-emerald-500'}`}>
+                        {needRefresh ? 'Güncelleme Hazır' : 'Güncel'}
+                      </p>
                     </div>
                   </div>
                   <button 
-                    onClick={() => {
-                      alert('Uygulama güncel! En son sürümü (v1.4.0) kullanıyorsunuz.');
+                    onClick={async () => {
+                      if (needRefresh) {
+                        updateServiceWorker(true);
+                      } else {
+                        // Manual check
+                        if ('serviceWorker' in navigator) {
+                          const registration = await navigator.serviceWorker.getRegistration();
+                          if (registration) {
+                            await registration.update();
+                            // If after update check needRefresh is still false, it's up to date
+                            setTimeout(() => {
+                              if (!needRefresh) {
+                                alert('Uygulama güncel! En son sürümü (v1.4.1) kullanıyorsunuz.');
+                              }
+                            }, 1000);
+                          } else {
+                            alert('Uygulama güncel!');
+                          }
+                        }
+                      }
                     }}
-                    className="w-full text-[10px] font-bold text-accent-dim uppercase tracking-widest border border-accent-dim/30 py-3 rounded-xl hover:bg-accent-dim/10 transition-colors"
+                    className={`w-full text-[10px] font-bold uppercase tracking-widest py-3 rounded-xl transition-all ${needRefresh ? 'bg-accent-dim text-white shadow-lg shadow-accent-dim/20' : 'text-accent-dim border border-accent-dim/30 hover:bg-accent-dim/10'}`}
                   >
-                    Güncellemeleri Kontrol Et
+                    {needRefresh ? 'Şimdi Güncelle ve Yeniden Başlat' : 'Güncellemeleri Kontrol Et'}
                   </button>
                 </div>
               </Card>
