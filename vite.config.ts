@@ -6,8 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  const isProd = mode === 'production';
+  const base = isProd ? '/StudyFlow/' : '/';
+
   return {
-    base: './',
+    base,
     plugins: [
       react(), 
       tailwindcss(),
@@ -44,8 +47,8 @@ export default defineConfig(({mode}) => {
           theme_color: '#3b82f6',
           background_color: '#f8fafc',
           display: 'standalone',
-          start_url: './',
-          scope: './',
+          start_url: base,
+          scope: base,
           icons: [
             {
               src: 'icon.svg',
