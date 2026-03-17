@@ -971,7 +971,7 @@ export default function App() {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="text-[10px] font-bold text-text-dim/40 uppercase tracking-widest mb-1">Versiyon</p>
-                      <p className="text-sm font-medium">Study Flow v1.4.1</p>
+                      <p className="text-sm font-medium">Study Flow v1.5.0</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-text-dim/40 uppercase tracking-widest mb-1">Durum</p>
@@ -983,7 +983,12 @@ export default function App() {
                   <button 
                     onClick={async () => {
                       if (needRefresh) {
-                        updateServiceWorker(true);
+                        console.log('Updating Service Worker...');
+                        await updateServiceWorker(true);
+                        // Fallback reload if SW doesn't trigger it
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 1500);
                       } else {
                         // Manual check
                         if ('serviceWorker' in navigator) {
@@ -993,7 +998,7 @@ export default function App() {
                             // If after update check needRefresh is still false, it's up to date
                             setTimeout(() => {
                               if (!needRefresh) {
-                                alert('Uygulama güncel! En son sürümü (v1.4.1) kullanıyorsunuz.');
+                                alert('Uygulama güncel! En son sürümü (v1.5.0) kullanıyorsunuz.');
                               }
                             }, 1000);
                           } else {
